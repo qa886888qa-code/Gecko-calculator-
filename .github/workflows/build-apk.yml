@@ -26,6 +26,19 @@ jobs:
       - name: Extract Android project
         run: |
           unzip -o GeckoCalculatorAndroid.zip -d android-project
+          python3 - <<'PY'
+          from pathlib import Path
+          files = list(Path("android-project").rglob("MainActivity.java"))
+          if not files:
+              raise SystemExit("MainActivity.java not found in project ZIP")
+          p = files[0]
+          s = p.read_text()
+          if "import android.graphics.drawable.GradientDrawable;" not in s:
+              s = s.replace("import android.graphics.", "import android.graphics.drawable.GradientDrawable;\nimport android.graphics.", 1) if "import android.graphics." in s else s.replace("import android.os.", "import android.graphics.drawable.GradientDrawable;\nimport android.os.", 1)
+          s = s.replace("interstitial.show(this,a->{loadInterstitial();});", "interstitial.show(this);loadInterstitial();")
+          p.write_text(s)
+          print("Patched Java compile errors in", p)
+          PY
           echo "Extracted project files:"
           find android-project -maxdepth 4 \( -name settings.gradle -o -name settings.gradle.kts -o -name build.gradle -o -name build.gradle.kts -o -name gradlew \) -print
       - name: Configure preinstalled Android SDK
